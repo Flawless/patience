@@ -1,0 +1,4 @@
+-.shadow-cljs
+-resources/public/js
+-resources/public/css/ui.css
+-resources/public/grove/js
