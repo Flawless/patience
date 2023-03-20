@@ -1,6 +1,6 @@
 > In the art of medicine, patience is not just a virtue - it is a necessity.
 >
-> `r quote_footer('--- GPT-3.5)`
+> `--- GPT-3.5)`
 
 # TL;DR
 ## Run repl in dev mode
