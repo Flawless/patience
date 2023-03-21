@@ -238,7 +238,7 @@
 (defn save-patient [{:keys [patients]} {{{:keys [id]} :path patient :form} :parameters}]
   (let [new-state (normalize-patient id patient)]
     (when (db/update-patient! patients id new-state)
-      (http/ok (patient-page (db/get-patient patients id) id)))))
+      (http/see-other "/patients"))))
 
 (defn delete-patient [{:keys [patients]} {{{:keys [id]} :path} :parameters}]
   (when (db/delete-patient! patients id)
