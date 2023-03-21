@@ -27,6 +27,23 @@
     filter
     [:name :like filter]))
 
+(defn- filter-errors
+  "Challange filter over unsupported keys or predicates. Returns list of all errors when found."
+  [[k p]]
+  (let [key->preds {:name #{:eq :like :gt :lt}
+                    :id #{:eq :gt :lt}
+                    :gender #{:eq :like :gt :lt}
+                    :date-of-birth #{:eq :gt :lt}
+                    :address #{:eq :like :gt :lt}
+                    :insurance-number #{:eq :gt :lt}}
+        supported-pred? (key->preds k)]
+    (cond
+      (nil? supported-pred?) [{:key k
+                               :error :unsupported-key}]
+      (not (supported-pred? p)) [{:key k
+                                  :pred p
+                                  :error :unsupported-pred}])))
+
 (defn- coerce-filter
   "Coerce filter depend on keys."
   [[k p v]]

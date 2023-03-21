@@ -17,7 +17,16 @@
      [:title "Patience"]]
     (into [:body ] body)]))
 
-(defn- patients-page [patients filter-str]
+(defn- error-page
+  [& body]
+  (apply page
+         [:div {:class (css :w-full :justify-center :flex :my-20 :text-3xl)}
+          [:h1 {:class (css :font-bold)}
+           (rand-nth ["You are dead."
+                      "Missiles have been launched, commander!"
+                      "I'm sorry, the whole app is crashed and couldn't be fixed."
+                      "Aliens just have envaded the Earth! Immidiatelly drop everything you are doing!"])]]
+         body))
   (let [th-col (css :px-6 :py-3)
         td (css :px-6 :py-4)]
     (page
@@ -137,6 +146,28 @@
               :class (css {:width "20px" :height "20px"})}]]]]
     (patient-form patient)]))
 
+(defn- filter-error-page [errors filter]
+  (let [error-code->format {:unsupported-key "Key '%s' is not supported"
+                            :unsupported-pred "Predicate '%s' is not supported for key '%s'"}]
+    (error-page
+     [:div {:class (css :px-2 :leading-loose)}
+      (into
+       [:div
+        [:span "Just kidding, actually you've made a mistake in a filter \""]
+        [:span {:class (css :italic)} filter]
+        [:span "\":"]]
+       (map (fn [{error :error
+                  k :key
+                  p :pred}]
+              [:div (apply format (error-code->format error) (remove nil? [p k]))])
+            errors))
+      [:div "Just go back and try again."]
+      [:div
+       "Listen, really, all is fine, I prepeared a special button just for you. Press it and try again:"
+       [:button {:onclick "history.back()"
+                 :class (css :border-solid :border-2 :border-slate-900 :m-2 :px-2 :shadow-xl)}
+        "I'll never make that mistake again!"]]])))
+
 ;; FIXME probably should be moved to coercion level
 (defn- normalize-patient
   "Add patience.model namespace to patient map, replace empty strings with nils. "
@@ -161,6 +192,10 @@
   (let [filters (filter/parse-filters filter-str)
         patients (db/list-patients patients filters)]
     (http/ok (patients-page patients filter-str))))
+        patients-list (db/list-patients patients {:filters filters :limit limit :offset offset})
+    (if-let [errors (seq (::db/errors patients-list))]
+      (http/bad-request (filter-error-page errors filter-str))
+      (http/ok (patients-page patients-list filter-str)))))
 
 (defn save-patient [{:keys [patients]} {{{:keys [id]} :path patient :form} :parameters}]
   (let [new-state (normalize-patient id patient)]
