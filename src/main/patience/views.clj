@@ -7,6 +7,10 @@
    [ring.util.http-response :as http]
    [shadow.css :refer [css]]))
 
+(def limit
+  "Constant value. Limit of patients on a page."
+  10)
+
 (defn- page
   "Wrap page body with html page structure."
   [& body]
@@ -27,8 +31,11 @@
                       "I'm sorry, the whole app is crashed and couldn't be fixed."
                       "Aliens just have envaded the Earth! Immidiatelly drop everything you are doing!"])]]
          body))
+
+(defn- patients-page [page-n total patients filter-str]
   (let [th-col (css :px-6 :py-3)
-        td (css :px-6 :py-4)]
+        td (css :px-6 :py-4)
+        on-page (count patients)]
     (page
      [:style
 ".tooltip:hover .tooltiptext {
@@ -59,12 +66,19 @@
          [:span {:class (css :text-rose-500)} "/"] " and any value. Value could be quoted to support passing spaces."]
         [:div
          [:span "Example: "]
-         [:span {:class (css :text-rose-500)}  "':name/eq \"Ivan Ivanov\" :date-of-birth/lt 2022-01-01 :date-of-birth/gt 2021-12-01'"]]]]
+         [:span {:class (css :text-rose-500)} "':name/eq \"Ivan Ivanov\" :date-of-birth/lt 2022-01-01 :date-of-birth/gt 2021-12-01'"]]]]
       [:button {:class (css :w-1of6 :font-bold :text-rose-600 :border-2 :border-rose-600 :m-2 :px-2)} "Filter"]]
      [:div {:class (css :pl-2 :bg-gray-50)}
       [:div {:class (css :flex :justify-between :border-b)}
        [:h1 {:class (css :uppercase :font-bold :text-gray-900 :px-6 :py-4 :text-xl)}
         "Patients"]
+       [:div {:class (css :flex)}
+        [:h1 {:class (css :uppercase :font-bold :text-gray-700 :px-6 :py-4 :text-xl)}
+         "Total: " total]
+        [:h1 {:class (css :uppercase :font-bold :text-gray-700 :px-6 :py-4 :text-xl)}
+         "Page: " page-n]
+        [:h1 {:class (css :uppercase :font-bold :text-gray-700 :px-6 :py-4 :text-xl)}
+         "On page: " on-page]]
        [:form {:method :post}
         [:input {:type :hidden
                  :name :name
@@ -100,7 +114,30 @@
                        [:button
                         [:img {:src "/media/delete.svg"
                                :class (css {:width "20px" :height "20px"})}]]]]])
-                  patients))]])))
+                  patients))]]
+     (when (< 1 page-n)
+      [:form
+       [:input {:type 'hidden
+                :name :filter
+                :value filter-str}]
+       [:input {:type 'hidden
+                :name :page
+                :value (dec page-n)}]
+       [:button
+        [:h1 {:class (css :uppercase :font-bold :text-gray-700 :mx-2 :px-6 :my-4 :text-xl :border-2 :border-solid)}
+         "Previous page"]]])
+     (when (and (>= on-page limit)
+                (< on-page total))
+      [:form
+       [:input {:type 'hidden
+                :name :filter
+                :value filter-str}]
+       [:input {:type 'hidden
+                :name :page
+                :value (inc page-n)}]
+       [:button
+        [:h1 {:class (css :uppercase :font-bold :text-gray-700 :mx-2 :px-6 :my-4 :text-xl :border-2 :border-solid)}
+         "Load more"]]]))))
 
 (defn- row [{:keys [type locator patient] :or {type 'text}} label]
   [:div {:class (css :flex :px-2 :pt-1)}
@@ -188,14 +225,15 @@
       (http/ok (patient-page patient id))
       (http/not-found))))
 
-(defn patients [{:keys [patients]} {{{filter-str :filter} :query} :parameters}]
+(defn patients [{:keys [patients]}
+                {{{filter-str :filter page :page :or {page 1}} :query} :parameters}]
   (let [filters (filter/parse-filters filter-str)
-        patients (db/list-patients patients filters)]
-    (http/ok (patients-page patients filter-str))))
+        offset (* (dec page) limit)
         patients-list (db/list-patients patients {:filters filters :limit limit :offset offset})
+        total (db/amount patients filters)]
     (if-let [errors (seq (::db/errors patients-list))]
       (http/bad-request (filter-error-page errors filter-str))
-      (http/ok (patients-page patients-list filter-str)))))
+      (http/ok (patients-page page total patients-list filter-str)))))
 
 (defn save-patient [{:keys [patients]} {{{:keys [id]} :path patient :form} :parameters}]
   (let [new-state (normalize-patient id patient)]

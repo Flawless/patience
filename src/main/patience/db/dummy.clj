@@ -19,17 +19,19 @@
   all filters."
   ([db] db)
   ([db filters]
-   (let [f (->> filters
-                (map (fn [filter] (if (vector? filter) filter [:name :like filter])))
-                (map (fn [[field pred value]]
-                       (let [k (keyword "patience.model" (name field))]
-                         (case pred
-                           :eq (comp #{value} k)
-                           :like (comp #(s/includes? % value) k)
-                           :gt (comp (partial gt value) k)
-                           :lt (comp (partial lt value) k)))))
-                (apply every-pred))]
-     (filter f db))))
+   (if (seq filters)
+     (let [f (->> filters
+                  (map (fn [filter] (if (vector? filter) filter [:name :like filter])))
+                  (map (fn [[field pred value]]
+                         (let [k (keyword "patience.model" (name field))]
+                           (case pred
+                             :eq (comp #{value} k)
+                             :like (comp #(s/includes? % value) k)
+                             :gt (comp (partial gt value) k)
+                             :lt (comp (partial lt value) k)))))
+                  (apply every-pred))]
+       (filter f db))
+     (get-patients db))))
 
 (defn- get-patient
   "Return a patient with given `sought-id`"
@@ -63,8 +65,9 @@
 
 (defrecord Patients [store]
     db.protocol/IPatients
-    (list-all [_this] (get-patients @store))
-    (list-filtered [_this filters] (get-patients @store filters))
+
+    (amount [_this filters] (count (get-patients @store filters)))
+    (list-by [_this {filters :filters}] (get-patients @store filters))
     (get-by-id [_this patient-id] (get-patient @store patient-id))
     (create! [_this patient]
       (let [patient' (prepare-new-patient @store patient)

@@ -63,28 +63,39 @@
                 [:address [:varchar 128]]
                 [:insurance-number :int]]}))
 
-(defn- get-patients
-  ([] {:select [:*] :from [:patients]})
-  ([filters]
-   (reduce (fn [acc filter]
-             (let [[k p v] (-> filter
-                               normalize-filter
-                               coerce-filter)
-                   where-clause (case p
-                                  :eq [:= k v]
-                                  :lt [:< k v]
-                                  :gt [:> k v]
-                                  :like [:like k (str \% v \%)])]
-               (update acc :where conj where-clause)))
-           {:select [:*] :from [:patients]}
-           filters)))
+(defn- patients-query
+  [{:keys [select filters limit offset]
+    :or {select [:*]}}]
+  (let [into-where (fnil (fn [acc & args]
+                            (apply into acc args))
+                          [:and])]
+     (cond-> (reduce (fn [acc filter]
+                       (let [[k p v] (-> filter
+                                         normalize-filter
+                                         coerce-filter)
+                             where-clause (case p
+                                            :eq [:= k v]
+                                            :lt [:< k v]
+                                            :gt [:> k v]
+                                            :like [:like k (str \% v \%)])]
+                         (update acc :where into-where [where-clause])))
+                     {:select select :from [:patients]}
+                     filters)
+       limit (assoc :limit limit)
+       offset (assoc :offset offset))))
 
-(defn- get-patient [sought-id]
+(defn- get-patients-query [opts] (patients-query opts))
+
+(defn- patients-count-query [filters]
+  (get-patients-query {:select [[[:count :*]]]
+                       :filters filters}))
+
+(defn- get-patient-query [sought-id]
   {:select [:*]
    :from [:patients]
    :where [:= :id sought-id]})
 
-(defn- create-patient [patient]
+(defn- create-patient-query [patient]
   (let [{:keys [columns values]}
         (reduce-kv (fn [acc k v]
                      (-> acc
@@ -97,11 +108,11 @@
      :values [values]
      :returning [:*]}))
 
-(defn- delete-patient [id]
+(defn- delete-patient-query [id]
   {:delete-from [:patients]
    :where [:= :id id]})
 
-(defn- update-patient [id patient]
+(defn- update-patient-query [id patient]
   {:update :patients
    :where [:= :id id]
    :set patient})
@@ -114,7 +125,7 @@
 
 (defn- create-patient! [ds patient]
   (->> (api->sql patient)
-           (create-patient)
+           (create-patient-query)
            (sql/format)
            (jdbc/execute! ds)
            (first)
@@ -122,50 +133,51 @@
            (sql->api)))
 
 (defn- get-patient-by-id [ds patient-id]
-  (->> (get-patient patient-id)
+  (->> (get-patient-query patient-id)
        (sql/format)
        (jdbc/execute! ds)
        (first)
        (drop-nils)
        (sql->api)))
 
-(defn- list-all-patients [ds]
-  (->> (get-patients)
-       (sql/format)
-       (jdbc/execute! ds)
-       (map drop-nils)
-       (map sql->api)))
-
-(defn- list-filtered-patients [ds filters]
-  (->> filters
-       (map normalize-filter)
-       (get-patients)
-       (sql/format)
-       (jdbc/execute! ds)
-       (map drop-nils)
-       (map sql->api)))
+(defn- list-patients [ds opts]
+  (let [{:keys [filters] :as opts} (update opts :filters (partial map normalize-filter))]
+    (if-let [errors (seq (mapcat filter-errors filters))]
+      {:patience.db/errors errors}
+      (->> (get-patients-query opts)
+           (sql/format)
+           (jdbc/execute! ds)
+           (map drop-nils)
+           (map sql->api)))))
 
 (defn- delete-patient! [ds patient-id]
-  (->> (delete-patient patient-id)
+  (->> (delete-patient-query patient-id)
        (sql/format)
        (jdbc/execute! ds)))
 
 (defn- update-patient! [ds patient-id new-state]
   (->> (api->sql new-state)
-       (update-patient patient-id)
+       (update-patient-query patient-id)
        (sql/format)
        (jdbc/execute! ds)
        (first)
        (drop-nils)
        (sql->api)))
 
+(defn- patients-count [ds filters]
+  (->> (patients-count-query filters)
+       (sql/format)
+       (jdbc/execute! ds)
+       (first)
+       :count))
+
 (defrecord Patients [ds]
     db.protocol/IPatients
-    (list-filtered [_this filters]
-      (list-filtered-patients ds filters))
+    (amount [_this filters]
+      (patients-count ds filters))
 
-    (list-all [_this]
-      (list-all-patients ds))
+    (list-by [_this opts]
+      (list-patients ds opts))
 
     (get-by-id [_this patient-id]
       (get-patient-by-id ds patient-id))

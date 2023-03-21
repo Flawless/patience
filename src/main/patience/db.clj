@@ -12,16 +12,18 @@
      :sql (db.sql/patients config)
      :dummy (db.dummy/patients config))))
 
+(defn amount
+  [patients filters]
+  (db.protocol/amount patients filters))
+
 (defn get-patient
   [patients id]
   (db.protocol/get-by-id patients id))
 
 (defn list-patients
-  ([patients] (db.protocol/list-all patients))
-  ([patients filters]
-   (if (seq filters)
-     (db.protocol/list-filtered patients filters)
-     (db.protocol/list-all patients))))
+  ([patients] (db.protocol/list-by patients {}))
+  ([patients opts]
+   (db.protocol/list-by patients opts)))
 
 (defn create-patient!
   [patients patient]

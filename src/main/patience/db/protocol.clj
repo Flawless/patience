@@ -1,8 +1,8 @@
 (ns patience.db.protocol)
 
 (defprotocol IPatients
-  (list-all [this])
-  (list-filtered [this filters])
+  (amount [this filters])
+  (list-by [this opts])
   (get-by-id [this patient-id])
   (create! [this patient])
   (delete! [this patient-id])

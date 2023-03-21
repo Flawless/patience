@@ -8,6 +8,7 @@
    [reitit.coercion.malli :as rcm]
    [reitit.ring :as ring]
    [reitit.ring.coercion :as rrc]
+   [reitit.ring.middleware.dev :as dev]
    [reitit.ring.middleware.muuntaja :as muuntaja]
    [reitit.ring.middleware.parameters :as parameters]))
 
@@ -49,7 +50,9 @@
 ;; FIXME split api routes and hiccup ui routes
 (defn routes [patients]
   [["/patients" {:get {:handler (partial views/patients {:patients patients})
-                       :parameters {:query [:map [:filter {:optional true} string?]]}}
+                       :parameters {:query [:map
+                                            [:filter {:optional true} string?]
+                                            [:page {:optional true} pos-int?]]}}
                  :post {:handler (partial views/create-patient {:patients patients})
                         :parameters {:form Patient}}}]
    ["/patients/:id" {:get {:handler (partial views/patient {:patients patients})
