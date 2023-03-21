@@ -1,6 +1,5 @@
 (ns patience.ui
-  {:dev/always true
-   :shadow.css/include ["patience/ui/main.css"]}
+  {:dev/always true}
   (:require
    [shadow.grove :as sg]
    [shadow.grove.events :as ev]

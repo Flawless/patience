@@ -41,7 +41,7 @@
          [:span {:class (css :text-rose-500)} "date-of-birth"] ", "
          [:span {:class (css :text-rose-500)} "gender"] ", "
          [:span {:class (css :text-rose-500)} "address"] " and "
-         [:span {:class (css :text-rose-500)} "insurance-id"] " prefixed by "
+         [:span {:class (css :text-rose-500)} "insurance-number"] " prefixed by "
          [:span {:class (css :text-rose-500)} ":"] " plus patient predicate key "
          [:span {:class (css :text-rose-500)} "eq"] ", "
          [:span {:class (css :text-rose-500)} "like"] ", "

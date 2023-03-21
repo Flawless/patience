@@ -1,5 +1,6 @@
 (ns patience.db.sql
   (:require
+   next.jdbc.date-time
    [clojure.instant :as inst]
    [clojure.string :as s]
    [clojure.tools.logging :as log]
