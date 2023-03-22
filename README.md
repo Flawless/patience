@@ -96,3 +96,4 @@ local tz (instead of just dates).
 should be made usefull (maybe after shadow-grove will be a more well documented (: )
 - the third it's good to see here some integration or maybe even e2e tests, it should be through out, but as far as
 it's just a demo app, I believe it's ok not to have such heavy constructions here.
+- Validation of configmap (or replacement of config system)
