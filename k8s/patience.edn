@@ -1,11 +1,13 @@
 {:db/patients {:type :sql
-               :config {:dbtype "postgres"
-                        :dbname "patience"
-                        :user "postgres"
-                        :password "postgres"
-                        :host "postgres"}}
+               :config {:ds {:dbtype "postgres"
+                             :dbname "patience"
+                             :user "postgres"
+                             :password "postgres"
+                             :host "postgres"}
+                        :trace? false}}
  :ring/handler {:patients #ig/ref :db/patients
                 :serve-static? true}
  :jetty/server {:ring-handler #ig/ref :ring/handler
                 :host "0.0.0.0"
-                :port 80}}
+                :port 80}
+ :patience.nrepl/server {:port 7888}}
