@@ -85,6 +85,8 @@ writting here such well-known things? (: )
 
 As it was said above, you can find an example of config in k8s directory.
 
+## :patience.nrepl/server
+Defines embedded nREPL server config, contains `:port` key to define port which nREPL server will listen.
 # Future development
 There is some thing to improve in a future. I tryied to add FIXME comments in such places but here is short summary:
 - the first of all the coercion should be imporved to prevent receiving empty strings from received forms and

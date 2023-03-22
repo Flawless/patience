@@ -8,7 +8,8 @@
    [patience.db :as db]
    [patience.handler :as handler]
    [patience.model :as-alias m]
-   [ring.adapter.jetty]))
+   [ring.adapter.jetty]
+   [patience.nrepl]))
 
 (def full-config
   {:db/patients {:type :dummy
@@ -36,7 +37,7 @@
   (let [server (ring.adapter.jetty/run-jetty ring-handler {:host host
                                                            :port port
                                                            :join? false})
-        _      (log/info "Jetty Server started on host" host " and port" port)]
+        _      (log/info "Jetty Server started on host" host "and port" port)]
     server))
 
 (defmethod ig/halt-key! :jetty/server
