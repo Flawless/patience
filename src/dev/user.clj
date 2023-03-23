@@ -10,9 +10,7 @@
    [clojure.tools.namespace.repl :as repl]
    [integrant.core :as ig]
    [patience.core :as patience]
-   [patience.model :as-alias m]
-   [shadow.cljs.devtools.server.fs-watch :as fs-watch]
-   [shadow.css.build :as cb]))
+   [patience.model :as-alias m]))
 
 (def full-config
   {:db/patients {:type :dummy
@@ -21,72 +19,79 @@
                   :serve-static? true}
    :jetty/server {:ring-handler (ig/ref :ring/handler)
                   :host "0.0.0.0"
-                  :port 9501}
-   ::css {}})
+                  :port 9501}})
 
 (alter-var-root #'patience/config (constantly full-config))
 
 ;; css
-(defn generate-css [css-ref]
-  (let [result
-        (-> @css-ref
-            (cb/generate '{:ui {:include [patience*]}})
-            (cb/write-outputs-to (io/file "resources/public" "css")))]
+(comment
+  (do
+    (require '[shadow.cljs.devtools.server.fs-watch :as fs-watch]
+             '[shadow.css.build :as cb])
 
-    (prn :CSS-GENERATED)
-    (doseq [mod (:outputs result)
-            {:keys [warning-type] :as warning} (:warnings mod)]
-      (prn [:CSS (name warning-type) (dissoc warning :warning-type)]))
-    (println)))
+    (alter-var-root #'patience/config
+                    assoc ::css {})
 
-(defn start
-  {:shadow/requires-server true}
-  [{:keys [css-ref css-watch-ref]}]
+    (defn generate-css [css-ref]
+      (let [result
+            (-> @css-ref
+                (cb/generate '{:ui {:include [patience*]}})
+                (cb/write-outputs-to (io/file "resources/public" "css")))]
 
-  ;; first initialize my css
-  (reset! css-ref
-    (-> (cb/start)
-        (cb/index-path (io/file "src" "main") {})))
+        (prn :CSS-GENERATED)
+        (doseq [mod (:outputs result)
+                {:keys [warning-type] :as warning} (:warnings mod)]
+          (prn [:CSS (name warning-type) (dissoc warning :warning-type)]))
+        (println)))
 
-  ;; then build it once
-  (generate-css css-ref)
+    (defn start
+      {:shadow/requires-server true}
+      [{:keys [css-ref css-watch-ref]}]
 
-  ;; then setup the watcher that rebuilds everything on change
-  (reset! css-watch-ref
-    (fs-watch/start
-      {}
-      [(io/file "src" "main")
-       (io/file "src" "dev")]
-      ["cljs" "cljc" "clj"]
-      (fn [updates]
-        (try
-          (doseq [{:keys [file event]} updates
-                  :when (not= event :del)]
-            ;; re-index all added or modified files
-            (swap! css-ref cb/index-file file))
+      ;; first initialize my css
+      (reset! css-ref
+              (-> (cb/start)
+                  (cb/index-path (io/file "src" "main") {})))
 
-          (generate-css css-ref)
-          (catch Exception e
-            (prn :css-build-failure)
-            (prn e))))))
+      ;; then build it once
+      (generate-css css-ref)
 
-  ::started)
+      ;; then setup the watcher that rebuilds everything on change
+      (reset! css-watch-ref
+              (fs-watch/start
+               {}
+               [(io/file "src" "main")
+                (io/file "src" "dev")]
+               ["cljs" "cljc" "clj"]
+               (fn [updates]
+                 (try
+                   (doseq [{:keys [file event]} updates
+                           :when (not= event :del)]
+                     ;; re-index all added or modified files
+                     (swap! css-ref cb/index-file file))
 
-(defn stop [{:keys [css-ref css-watch-ref]}]
-  (when-some [css-watch @css-watch-ref]
-    (fs-watch/stop css-watch)
-    (reset! css-ref nil))
+                   (generate-css css-ref)
+                   (catch Exception e
+                     (prn :css-build-failure)
+                     (prn e))))))
 
-  ::stopped)
+      ::started)
 
-(defmethod ig/init-key ::css [_ _]
-  (let [css {:css-ref (atom nil)
-             :css-watch-ref (atom nil)}
-        _ (start css)]
-    css))
+    (defn stop [{:keys [css-ref css-watch-ref]}]
+      (when-some [css-watch @css-watch-ref]
+        (fs-watch/stop css-watch)
+        (reset! css-ref nil))
 
-(defmethod ig/halt-key! ::css [_ css]
-  (stop css))
+      ::stopped)
+
+    (defmethod ig/init-key ::css [_ _]
+      (let [css {:css-ref (atom nil)
+                 :css-watch-ref (atom nil)}
+            _ (start css)]
+        css))
+
+    (defmethod ig/halt-key! ::css [_ css]
+      (stop css))))
 
 (comment
   ;; load system config
@@ -109,6 +114,15 @@
   (some? patience/system)
 
   patience/system
+
+  ;; load sample patients (only on local repl)
+  (require '[clojure.java.io :as io])
+  (slurp (io/resource "patients-sample.edn"))
+
+  (let [patients (:db/patients patience/system)]
+    (doseq [patient sample-patients]
+      (patience.db/create-patient! patients
+                                   (update patient :date-of-birth clojure.instant/read-instant-date))))
 
   (def test-patients [{::m/id 1
                        ::m/name "Ivan Ivanov"
