@@ -62,10 +62,13 @@
 (defn init-data
   {::ev/handle ::init-data}
   [env {:keys [result]}]
-  (tap> [:result result])
-  (update env :db #(-> %
-                       (assoc ::m/init-complete? true)
-                       (cond-> result (db/merge-seq ::m/patient result [::m/patients])))))
+  (let [result (js->clj result :keywordize-keys true)
+        _ (tap> [:result result])]
+    (update env :db #(-> %
+                         (assoc ::m/init-complete? true)
+                         (cond->
+                             result
+                             (db/merge-seq ::m/patient result [::m/patients]))))))
 
 (defmethod eql/attr ::m/patients-count [env db _ _]
   (->> (db/all-of db ::m/patient)
@@ -117,23 +120,11 @@
   {::ev/handle :ui/route!}
   [{:keys [db] :as env} {:keys [tokens] :as msg}]
 
-  (tap> [:route msg])
-  (let [[main & more] tokens]
-    (case main
-      "grove/patients"
+  (let [[root main & more] tokens]
+    (case [root main]
+      ["grove" "patients"]
       (update env :db assoc
               ::m/current-page {:id :patient})
-
-      "grove/patient"
-      (let [[patient-id sub-page] more
-            patient-ident (db/make-ident ::m/patient patient-id)]
-        (update env :db
-                (fn [db]
-                  (-> db
-                      (assoc ::m/current-page
-                             {:id patient-id
-                              :ident patient-ident})
-                      (assoc ::m/current-patient patient-ident)))))
 
       (do (js/console.warn "unknown-route" msg)
           (ev/queue-fx env :ui/redirect! {:token "/grove/patients"})))))

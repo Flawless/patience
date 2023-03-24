@@ -14,7 +14,8 @@
 (def full-config
   {:db/patients {:type :dummy
                  :config {:store (atom [])}}
-   :ring/handler {:patients (ig/ref :db/patients)}
+   :ring/handler {:patients (ig/ref :db/patients)
+                  :serve-static? true}
    :jetty/server {:ring-handler (ig/ref :ring/handler)
                   :host "0.0.0.0"
                   :port 9501}})

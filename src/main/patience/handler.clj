@@ -62,7 +62,8 @@
                                          :form Patient}}
                      :delete {:handler (partial views/delete-patient {:patients patients})
                               :parameters {:path [:map [:id pos-int?]]}}}]
-   ["/api" ::api
+   ["/api" {:name ::api
+            :middleware [muuntaja/format-middleware]}
     ["/ping" {:name ::ping
               :get http-api/pong}]
     ["/patients" ::patients-view

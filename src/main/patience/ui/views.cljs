@@ -79,6 +79,9 @@
         (sg/query-ident patient-ident))
 
   (render
+   (tap> [:ident patient-ident
+          :name name
+          :e current-patient])
    (if (= patient-ident current-patient)
      (<< [:li {:class (css :text-rose-900)
                :on-click {:e ::m/select-patient! :patient-ident patient-ident}}
@@ -92,6 +95,7 @@
         (sg/query-root [::m/filtered-patients]))
 
   (render
+   (tap> [:patients filtered-patients])
    (<< [:ul.patients-list (sg/keyed-seq filtered-patients identity patient-item)])))
 
 (defc stat-bar []
@@ -110,6 +114,7 @@
         (sg/query-root [::m/current-patient ::m/init-complete?]))
 
   (render
+   (tap> [:initialized? init-complete?])
    (tap> [:curr-pat current-patient])
    (<< (stat-bar)
        [:div {:class (css :flex :max-w-4xl :px-2 :pt-2)}

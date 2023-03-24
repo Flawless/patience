@@ -33,14 +33,13 @@
 
   (transit/init! env/rt-ref)
   (history/init! env/rt-ref
-                 {:use-fragment true
-                  :start-token "/all"})
+                 {:use-fragment false})
 
   (sg/reg-fx env/rt-ref :http-api
              (http-fx/make-handler
               {:on-error {:e ::m/request-error!}
                :base-url "/api"
-               :request-format :transit}))
+               :request-format :edn}))
 
   (sg/run-tx! env/rt-ref {:e ::m/init!})
 
