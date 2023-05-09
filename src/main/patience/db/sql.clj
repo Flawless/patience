@@ -33,7 +33,7 @@
   (let [key->preds {:name #{:eq :like :gt :lt}
                     :id #{:eq :gt :lt}
                     :gender #{:eq :like :gt :lt}
-                    :date-of-birth #{:eq :gt :lt}
+                    :date-of-birth #{:eq :gt :lt :between}
                     :address #{:eq :like :gt :lt}
                     :insurance-number #{:eq :gt :lt}}
         supported-pred? (key->preds k)]
@@ -47,9 +47,10 @@
 (defn- coerce-filter
   "Coerce filter depend on keys."
   [[k p v]]
-  (let [v' (case k
-             :date-of-birth (inst/read-instant-date v)
-             :insurance-number (parse-long v)
+  (let [v' (case [k (vector? v)]
+             [:date-of-birth true] (mapv inst/read-instant-date v)
+             [:date-of-birth false] (inst/read-instant-date v)
+             [:insurance-number false] (parse-long v)
              v)]
     [k p v']))
 
@@ -74,6 +75,7 @@
                                          normalize-filter
                                          coerce-filter)
                              where-clause (case p
+                                            :between (into [:between] v)
                                             :eq [:= k v]
                                             :lt [:< k v]
                                             :gt [:> k v]

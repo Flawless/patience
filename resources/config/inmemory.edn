@@ -1,0 +1,7 @@
+(def full-config
+  {:db/patients {:type :dummy
+                 :config {:store (atom [])}}
+   :ring/handler {:patients (ig/ref :db/patients)}
+   :jetty/server {:ring-handler (ig/ref :ring/handler)
+                  :host "0.0.0.0"
+                  :port 9501}})

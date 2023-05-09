@@ -5,6 +5,10 @@
 
 (deftest parse-filters-test
   (is (= [[:name :eq "Ivan Ivanov"]
+          [:date-of-birth :between ["2021-12-01" "2022-12-01"]]
+          "!@#$"]
+         (subject/parse-filters ":name/eq \"Ivan Ivanov\" :date-of-birth/between \"2021-12-01, 2022-12-01\" !@#$\"")))
+  (is (= [[:name :eq "Ivan Ivanov"]
           [:date-of-birth :gt "2021-12-01"]
           "oh !@#$"]
          (subject/parse-filters ":name/eq \"Ivan Ivanov\" :date-of-birth/gt 2021-12-01 \"oh !@#$\"")))

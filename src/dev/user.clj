@@ -19,7 +19,8 @@
                   :serve-static? true}
    :jetty/server {:ring-handler (ig/ref :ring/handler)
                   :host "0.0.0.0"
-                  :port 9501}})
+                  :port 9501}
+   :dev/css {:paths []}})
 
 (alter-var-root #'patience/config (constantly full-config))
 
